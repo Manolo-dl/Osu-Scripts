@@ -38,7 +38,7 @@ The GUI includes a dashboard showing download progress and completed beatmaps.
 3. Run the script:
 
    ```bash
-   python download_osu_songs_auto.py
+   python osu_beatmap_downloader.py
    ```
 4. In the GUI:
 
