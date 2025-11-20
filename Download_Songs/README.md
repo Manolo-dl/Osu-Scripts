@@ -12,14 +12,6 @@ This script allows you to automatically download osu! beatmaps using a graphical
 
 The GUI includes a dashboard showing download progress and completed beatmaps.
 
-## Features
-
-* Automatic download of beatmaps from osu.ppy.sh and beatconnect.io.
-* Dashboard with progress bar and list of downloaded beatmaps.
-* Error handling with automatic retries and exponential backoff.
-* Support for manual login in the browser via SeleniumBase.
-* Does not create default folders; always uses the folder selected by the user.
-
 ## Requirements
 
 * Python 3.9 or higher
