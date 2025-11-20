@@ -1,6 +1,6 @@
 # osu! Utilities Repository
 
-![osu! logo](https://assets.ppy.sh/media/osu-logo.png)
+![osu! logo](Osu!_Logo_2016.png)
 
 ## Description
 
