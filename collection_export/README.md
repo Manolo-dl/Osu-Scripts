@@ -47,8 +47,12 @@ Click the Select osu! Folder button. The folder must contain collection.db and a
 The program will display all collections with the number of beatmaps. Select the collections you want to export.
 
 3. Export
-Click Export Selected Collections and choose an output folder. The program will generate one .txt file per collection with valid osu! beatmap links.
+The `.txt` files with the collections songs will be in the folder: osu!\collection_exports
 
-4. After export
-
-
+## Notes
+    The program works entirely offline.
+    Only beatmaps present in your local Songs folder will have links in the exported .txt.
+    Download links format:
+```template
+https://osu.ppy.sh/beatmapsets/<beatmapset_id>#<mode>/<beatmap_id>
+```
