@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-osu_beatmap_downloader.py
+osu_beatmap_downloader_gui_final.py
 Three-step GUI workflow:
 1. Select links file
 2. Select download folder
-3. Login with SeleniumBase and download
-Fixes:
+3. Login with SeleniumBase (only if needed) and download
+Features:
+- Saves download folder and osu_session in JSON for next run
 - Step 3 disabled until previous steps are completed
-- Dashboard shows only final beatmap names (no duplicate IDs)
+- Dashboard shows only final beatmap names
 - Counter matches total beatmaps
 """
 
 import os
 import re
 import time
+import json
 import requests
 import zipfile
 from pathlib import Path
@@ -25,10 +27,44 @@ import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 import threading
 
+CONFIG_FILE = "osu_downloader_config.json"
+CHUNK_SIZE = 8192
+MAX_RETRIES = 3
+BACKOFF_FACTOR = 1.5
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+    "Referer": "https://osu.ppy.sh/"
+}
+
+
+# ---------------------------
+# Config utils
+# ---------------------------
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def save_config(data):
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+
 # ---------------------------
 # SeleniumBase login
 # ---------------------------
 def get_osu_session():
+    config = load_config()
+    if "osu_session" in config:
+        print("✅ Using saved osu_session from config.")
+        return config["osu_session"]
+
     driver = Driver(uc=True)
     url = "https://osu.ppy.sh/"
     driver.uc_open_with_reconnect(url, 4)
@@ -53,11 +89,16 @@ def get_osu_session():
             break
     driver.quit()
     if osu_session:
-        print("\n✅ osu_session cookie found.")
+        print("\n✅ osu_session cookie found. Saving to config...")
+        config["osu_session"] = osu_session
+        if hasattr(MainApp, "download_folder") and MainApp.download_folder:
+            config["download_folder"] = str(MainApp.download_folder)
+        save_config(config)
         return osu_session
     else:
         print("\n❌ osu_session cookie NOT found.")
         return None
+
 
 # ---------------------------
 # Dashboard
@@ -106,18 +147,10 @@ class DownloadDashboard:
             self.root.update_idletasks()
             messagebox.showinfo("Download Complete", "All beatmaps have been downloaded successfully!")
 
+
 # ---------------------------
 # Utils
 # ---------------------------
-CHUNK_SIZE = 8192
-MAX_RETRIES = 3
-BACKOFF_FACTOR = 1.5
-DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-    "Referer": "https://osu.ppy.sh/"
-}
-
 def extract_id(link):
     link = link.strip()
     if not link:
@@ -134,6 +167,7 @@ def extract_id(link):
         return m2.group(1)
     raise ValueError(f"Could not extract beatmapset_id from: {link}")
 
+
 def filename_from_cd(header):
     if not header:
         return None
@@ -145,11 +179,13 @@ def filename_from_cd(header):
         return m2.group(1)
     return None
 
+
 def is_valid_zip(path):
     try:
         return zipfile.is_zipfile(path)
     except Exception:
         return False
+
 
 def download_with_progress(session, url, out_path, gui_window=None):
     attempt = 0
@@ -194,6 +230,7 @@ def download_with_progress(session, url, out_path, gui_window=None):
 
     return final_path
 
+
 def try_sources(session, beatmap_id, output_folder, gui_window=None):
     sources = [
         f"https://beatconnect.io/b/{beatmap_id}",
@@ -202,14 +239,14 @@ def try_sources(session, beatmap_id, output_folder, gui_window=None):
     last_error = None
     for url in sources:
         try:
+            head = None
             try:
                 head = session.head(url, headers=DEFAULT_HEADERS, allow_redirects=True, timeout=15)
             except Exception:
                 head = None
+            name = None
             if head and head.status_code == 200:
                 name = filename_from_cd(head.headers.get("content-disposition") or head.headers.get("Content-Disposition"))
-            else:
-                name = None
             name = name or f"{beatmap_id}.osz"
             out_path = output_folder / name
 
@@ -226,14 +263,17 @@ def try_sources(session, beatmap_id, output_folder, gui_window=None):
             last_error = e
     raise RuntimeError(f"Could not download a valid .osz for {beatmap_id}: {last_error}")
 
+
 # ---------------------------
 # Main GUI
 # ---------------------------
 class MainApp:
+    download_folder = None  # class-level reference for config saving
+
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("osu! Downloader Setup")
-        self.root.geometry("500x250")
+        self.root.geometry("500x300")
         self.root.attributes("-topmost", True)
         self.root.resizable(False, False)
         self.links_file = None
@@ -242,12 +282,18 @@ class MainApp:
 
         big_font = ("Arial", 12, "bold")
 
+        # Load saved config
+        config = load_config()
+        if "download_folder" in config:
+            self.download_folder = Path(config["download_folder"])
+            MainApp.download_folder = self.download_folder
+
         self.label_file = tk.Label(self.root, text="Step 1: Select links file", font=big_font)
         self.label_file.pack(pady=10)
         self.btn_file = tk.Button(self.root, text="Select File", command=self.select_file)
         self.btn_file.pack(pady=5)
 
-        self.label_folder = tk.Label(self.root, text="Step 2: Select download folder", font=big_font)
+        self.label_folder = tk.Label(self.root, text=f"Folder: {self.download_folder}" if self.download_folder else "Step 2: Select download folder", font=big_font)
         self.label_folder.pack(pady=10)
         self.btn_folder = tk.Button(self.root, text="Select Folder", command=self.select_folder)
         self.btn_folder.pack(pady=5)
@@ -257,6 +303,8 @@ class MainApp:
         self.btn_login = tk.Button(self.root, text="Login & Start", command=self.start_download)
         self.btn_login.pack(pady=5)
         self.btn_login.config(state=tk.DISABLED)
+
+        self.update_login_button_state()
 
     def select_file(self):
         path = filedialog.askopenfilename(title="Select links file", filetypes=[("Text files", "*.txt")])
@@ -269,6 +317,7 @@ class MainApp:
         path = filedialog.askdirectory(title="Select download folder")
         if path:
             self.download_folder = Path(path)
+            MainApp.download_folder = self.download_folder
             self.label_folder.config(text=f"Folder: {path}")
         self.update_login_button_state()
 
@@ -280,6 +329,12 @@ class MainApp:
 
     def start_download(self):
         self.root.destroy()
+
+        # Save folder to config before login
+        config = load_config()
+        if self.download_folder:
+            config["download_folder"] = str(self.download_folder)
+            save_config(config)
 
         self.osu_cookie = get_osu_session()
         if not self.osu_cookie:
@@ -306,7 +361,7 @@ class MainApp:
         threading.Thread(target=download_all, daemon=True).start()
         dashboard.root.mainloop()
 
+
 if __name__ == "__main__":
     app = MainApp()
     app.root.mainloop()
-
