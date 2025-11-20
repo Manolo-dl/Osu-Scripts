@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-osu_beatmap_downloader_gui_final.py
+osu_beatmap_downloader.py
 Three-step GUI workflow:
 1. Select links file
 2. Select download folder
@@ -309,3 +309,4 @@ class MainApp:
 if __name__ == "__main__":
     app = MainApp()
     app.root.mainloop()
+
