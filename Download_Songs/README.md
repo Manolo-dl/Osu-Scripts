@@ -1,6 +1,6 @@
 # osu! Beatmap Downloader GUI
 
-![osu! logo](https://assets.ppy.sh/media/osu-logo.png)
+![osu! logo](https://es.wikipedia.org/wiki/Archivo:Osu!_Logo_2016.svg)
 
 ## Description
 
