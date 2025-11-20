@@ -1,78 +1,54 @@
 # osu! Collection Exporter (Offline)
 
-A simple offline tool to export your osu! collections into text files with download links for each beatmap. Fully offline — no API or internet connection required.
+Export your osu! collections to `.txt` files with download links for each beatmap, completely offline. No osu! API or internet connection is required.
 
 ---
 
 ## Features
 
 - GUI-based, easy to use.  
-- Automatically reads your `collection.db` and Songs folder.  
-- Select which collections to export.  
-- Exports `.txt` files containing valid osu! beatmap links.  
-- Handles multiple beatmaps from the same beatmapset (one link per set).  
+- Automatically detects your `collection.db` and `Songs` folder.  
+- Displays all your collections for selection.  
+- Allows selecting multiple collections to export.  
+- Exports `.txt` files containing valid osu! beatmap links (one link per beatmapset).  
 - Shows a progress bar during export.  
+- Reports the number of missing songs (songs not found locally).  
 - Automatically clears selection after export.  
-- Reports the number of missing beatmaps.
 
 ---
 
 ## Requirements
 
-- Python 3.8+  
-- No additional dependencies (uses only standard library and Tkinter)
+- Python 3.8 or higher  
+- Tkinter (usually included in standard Python installation)
 
 ---
 
-## Usage
+## How to Use
 
-1. Download or clone the repository.  
+1. **Download or clone this repository**:
 
 ```bash
 git clone https://github.com/yourusername/osu-collection-exporter.git
 cd osu-collection-exporter
-Run the program:
+```
+2. Run the program
 
-bash
-Copiar código
+```bash
 python collection_export.py
-Steps in the GUI:
+```
 
-Select your osu! folder — the folder containing collection.db and the Songs folder.
+## Usage
 
-Select collections from the list to export.
+1. Select your osu! folder
+Click the Select osu! Folder button. The folder must contain collection.db and a Songs folder.
 
-Export — choose an output folder for your .txt files.
+2. Select collections to export
+The program will display all collections with the number of beatmaps. Select the collections you want to export.
 
-After export:
+3. Export
+Click Export Selected Collections and choose an output folder. The program will generate one .txt file per collection with valid osu! beatmap links.
 
-.txt files will be generated for each selected collection with download links.
+4. After export
 
-Missing beatmaps are counted but no link is written for them.
 
-Notes
-The program works completely offline.
-
-Only beatmaps present in your local Songs folder will have valid links in the exported .txt.
-
-Export links use the official osu! beatmapset URLs, automatically selecting the correct mode (osu!, taiko, fruits, mania).
-
-If a beatmap is missing locally, it will be reported in the summary popup.
-
-Screenshots
-(Optional: include screenshots of your GUI here)
-
-License
-MIT License
-
-Contributing
-Feel free to open issues or submit pull requests to improve the program.
-
-pgsql
-Copiar código
-
----
-
-If you want, I can also **write a shorter “user-friendly” version** suitable for GitHub with screenshots and step-by-step usage tips, ready to paste directly into your repo.  
-
-Do you want me to do that?
