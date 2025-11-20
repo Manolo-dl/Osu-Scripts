@@ -4,7 +4,7 @@
 
 ## Description
 
-This repository contains a collection of scripts and utilities for osu!, aimed at enhancing your experience with beatmap management, downloads, and automation.
+This repository contains a collection of tools for osu!, aimed at enhancing your experience with beatmap management, downloads, and automation.
 
 Each script is designed for a specific task, such as downloading beatmaps, managing collections, or automating routine tasks in osu!. All tools include detailed instructions and a GUI when appropriate.
 
