@@ -2,7 +2,7 @@ import struct
 import os
 import hashlib
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 
 # -------------------- COLLECTION.DB FUNCTIONS --------------------
 
@@ -42,24 +42,30 @@ def load_collection_db(path):
             collections.append((name, beatmaps))
     return collections
 
-# -------------------- MD5 FUNCTIONS --------------------
+# -------------------- OSU FILE PARSING --------------------
+
+MODE_MAP = {0: "osu", 1: "taiko", 2: "fruits", 3: "mania"}
+
+def parse_osu_file(osu_file):
+    beatmap_id = None
+    mode = None
+    with open(osu_file, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            if line.startswith("BeatmapID:"):
+                beatmap_id = line.split(":")[1].strip()
+            if line.startswith("Mode:"):
+                mode_num = int(line.split(":")[1].strip())
+                mode = MODE_MAP.get(mode_num, "osu")
+            if beatmap_id and mode is not None:
+                break
+    return beatmap_id, mode
 
 def md5_file(path):
-    """Return MD5 hash of a file"""
     hash_md5 = hashlib.md5()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
-
-def find_osu_files_map(songs_folder):
-    """Return list of all .osu files with their absolute paths"""
-    osu_files = []
-    for root, dirs, files in os.walk(songs_folder):
-        for file in files:
-            if file.endswith(".osu"):
-                osu_files.append(os.path.join(root, file))
-    return osu_files
 
 # -------------------- EXPORT FUNCTION --------------------
 
@@ -68,27 +74,53 @@ def export_selected_collections(selected_indices, collections, songs_folder):
     if not folder:
         return
 
-    # Get list of all .osu files in Songs folder
-    osu_files = find_osu_files_map(songs_folder)
-
     for i in selected_indices:
         name, md5_list = collections[i]
         safe_name = "".join(c for c in name if c.isalnum() or c in " _-").strip()
         out_path = os.path.join(folder, f"{safe_name}.txt")
 
+        # Convert list to set for faster lookup
+        md5_set = set(md5_list)
+
+        # Store one link per beatmapset to avoid duplicates
+        beatmapset_links = {}
+
+        # Walk through Songs folder
+        for root, dirs, files in os.walk(songs_folder):
+            folder_name = os.path.basename(root)
+            if not folder_name or not folder_name[0].isdigit():
+                continue
+            beatmapset_id = folder_name.split(" ")[0]
+
+            found_md5s_in_folder = set()
+
+            for file in files:
+                if not file.endswith(".osu"):
+                    continue
+                osu_path = os.path.join(root, file)
+                try:
+                    file_md5 = md5_file(osu_path)
+                except:
+                    continue
+
+                if file_md5 in md5_set:
+                    beatmap_id, mode = parse_osu_file(osu_path)
+                    if beatmap_id and mode and beatmapset_id not in beatmapset_links:
+                        link = f"https://osu.ppy.sh/beatmapsets/{beatmapset_id}#{mode}/{beatmap_id}"
+                        beatmapset_links[beatmapset_id] = link
+                    found_md5s_in_folder.add(file_md5)
+
+            # Remove found MD5s from the set to skip already processed maps
+            md5_set -= found_md5s_in_folder
+            if not md5_set:
+                break  # all MD5s found
+
         with open(out_path, "w", encoding="utf-8") as f:
-            for md5 in md5_list:
-                found = False
-                for osu_file in osu_files:
-                    try:
-                        if md5_file(osu_file) == md5:
-                            f.write(f"file://{osu_file}\n")
-                            found = True
-                            break
-                    except:
-                        continue
-                if not found:
-                    f.write(f"# Not found locally: {md5}\n")
+            for link in beatmapset_links.values():
+                f.write(link + "\n")
+            # List missing maps
+            for missing_md5 in md5_set:
+                f.write(f"# Not found locally: {missing_md5}\n")
 
     messagebox.showinfo("Done", f"Exported {len(selected_indices)} collections to {folder}")
 
