@@ -69,7 +69,7 @@ def md5_file(path):
 
 # -------------------- EXPORT FUNCTION --------------------
 
-def export_selected_collections(selected_indices, collections, songs_folder, progress_var, root):
+def export_selected_collections(selected_indices, collections, songs_folder, progress_var, root, listbox):
     total_collections = len(selected_indices)
     exported_count = 0
     total_missing = 0
@@ -85,15 +85,13 @@ def export_selected_collections(selected_indices, collections, songs_folder, pro
 
         md5_set = set(md5_list)
         beatmapset_links = {}
-        folder_md5s = {}
 
-        # Walk Songs folder
+        # Walk Songs folder to find MD5 matches
         for root_dir, dirs, files in os.walk(songs_folder):
             folder_name = os.path.basename(root_dir)
             if not folder_name or not folder_name[0].isdigit():
                 continue
             beatmapset_id = folder_name.split(" ")[0]
-            folder_md5s[folder_name] = []
 
             for file in files:
                 if not file.endswith(".osu"):
@@ -104,38 +102,37 @@ def export_selected_collections(selected_indices, collections, songs_folder, pro
                 except:
                     continue
 
-                folder_md5s[folder_name].append(file_md5)
-
                 if file_md5 in md5_set and beatmapset_id not in beatmapset_links:
                     beatmap_id, mode = parse_osu_file(osu_path)
                     if beatmap_id and mode:
                         link = f"https://osu.ppy.sh/beatmapsets/{beatmapset_id}#{mode}/{beatmap_id}"
                         beatmapset_links[beatmapset_id] = link
 
-            md5_set -= set(folder_md5s[folder_name])
+            # Remove found MD5s from the set
+            md5_set -= set(beatmapset_links.keys())
             if not md5_set:
                 break
 
+        # Write only actual links
         with open(out_path, "w", encoding="utf-8") as f:
             for link in beatmapset_links.values():
                 f.write(link + "\n")
-            for missing_md5 in md5_set:
-                total_missing += 1
-                possible_folder = None
-                for folder_name, md5s in folder_md5s.items():
-                    if md5s:
-                        possible_folder = folder_name
-                        break
-                if possible_folder:
-                    f.write(f"# Not found locally: {missing_md5} (possible folder: {possible_folder})\n")
-                else:
-                    f.write(f"# Not found locally: {missing_md5}\n")
+
+        # Count missing songs
+        missing_count = len(md5_list) - len(beatmapset_links)
+        total_missing += missing_count
 
         exported_count += 1
         progress_var.set(int((idx + 1) / total_collections * 100))
         root.update_idletasks()
 
-    messagebox.showinfo("Done", f"Exported {exported_count} collections.\nMissing maps: {total_missing}")
+    # Clear selection using the passed Listbox
+    listbox.selection_clear(0, tk.END)
+
+    messagebox.showinfo(
+        "Export Complete",
+        f"Exported {exported_count} collections.\nTotal missing songs: {total_missing}"
+    )
 
 # -------------------- GUI --------------------
 
@@ -204,7 +201,9 @@ class OsuCollectionExporter:
         if not selected:
             messagebox.showwarning("No selection", "Please select at least one collection")
             return
-        export_selected_collections(selected, self.collections, self.songs_folder, self.progress_var, self.root)
+        export_selected_collections(
+            selected, self.collections, self.songs_folder, self.progress_var, self.root, self.listbox
+        )
 
 # -------------------- MAIN --------------------
 
