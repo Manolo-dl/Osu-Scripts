@@ -2,7 +2,7 @@
 # Search your songs directory for maps based on tags to export as download links
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import ttk, filedialog, messagebox, scrolledtext
 from pathlib import Path
 import threading
 
@@ -108,51 +108,112 @@ class SongScanner:
 
         print(f"\nExported {len(self.matches)} links to {output_path}")
 
-
+ # ----------------- HP Entry Validation -----------------
+def validate_hp_entry(P):
+    """
+    Tkinter validatecommand for HP entries.
+    P = proposed string value in the entry
+    Returns True if valid input (float between 0-10 or empty string), False otherwise.
+    """
+    if P == "":
+        return True
+    try:
+        val = float(P)
+        return 0.0 <= val <= 10.0
+    except ValueError:
+        return False
+        
 class OsuScannerUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("osu! Tag Scanner")
-        self.root.geometry("600x500")
+        self.root.geometry("650x600")
 
-        # Folder selection
-        tk.Label(self.root, text="Step 1: Select your osu! Songs folder").pack(pady=5)
-        tk.Button(self.root, text="Select Songs Folder", command=self.select_songs_folder).pack(pady=5)
-        self.folder_label = tk.Label(self.root, text="No folder selected")
-        self.folder_label.pack(pady=5)
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Tags input
-        tk.Label(self.root, text="Step 2: Enter tags to search (comma-separated)").pack(pady=10)
-        self.tags_entry = tk.Entry(self.root, width=50)
-        self.tags_entry.pack(pady=5)
+        # --- Tab 1: Setup ---
+        self.tab_setup = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_setup, text="Setup")
+        self.create_setup_tab()
 
-        # Output file selection
-        tk.Label(self.root, text="Step 3: Select output file").pack(pady=10)
-        tk.Button(self.root, text="Select Output File", command=self.select_output_file).pack(pady=5)
-        self.output_label = tk.Label(self.root, text="No file selected")
-        self.output_label.pack(pady=5)
+        # --- Tab 2: Filters ---
+        self.tab_filters = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_filters, text="Filters")
+        self.create_filters_tab()
 
-        # Scan button
-        self.scan_button = tk.Button(self.root, text="Start Scan", command=self.start_scan)
-        self.scan_button.pack(pady=10)
-
-        # Progress / status
-        self.status_box = scrolledtext.ScrolledText(self.root, height=15, width=70)
-        self.status_box.pack(pady=10)
+        # --- Status Box ---
+        self.status_box = scrolledtext.ScrolledText(self.root, height=15)
+        self.status_box.pack(fill='both', expand=True, pady=5)
         self.status_box.config(state=tk.DISABLED)
 
-        # Internal state
         self.songs_dir = None
         self.output_file = None
 
         self.root.mainloop()
 
-    def log(self, text):
-        self.status_box.config(state=tk.NORMAL)
-        self.status_box.insert(tk.END, text + "\n")
-        self.status_box.see(tk.END)
-        self.status_box.config(state=tk.DISABLED)
-        self.root.update_idletasks()
+    # ----------------- Tabs Creation -----------------
+    def create_setup_tab(self):
+        tk.Label(self.tab_setup, text="Select your osu! Songs folder:").pack(pady=5)
+        tk.Button(self.tab_setup, text="Browse", command=self.select_songs_folder).pack(pady=5)
+        self.folder_label = tk.Label(self.tab_setup, text="No folder selected")
+        self.folder_label.pack(pady=5)
+
+        tk.Label(self.tab_setup, text="Select output file:").pack(pady=10)
+        tk.Button(self.tab_setup, text="Browse", command=self.select_output_file).pack(pady=5)
+        self.output_label = tk.Label(self.tab_setup, text="No file selected")
+        self.output_label.pack(pady=5)
+
+    def create_filters_tab(self):
+        # Tags
+        tk.Label(self.tab_filters, text="Enter tags to search (comma-separated):").pack(pady=10)
+        self.tags_entry = tk.Entry(self.tab_filters, width=50)
+        self.tags_entry.pack(pady=5)
+
+        # Game mode
+        tk.Label(self.tab_filters, text="Select Game Mode:").pack(pady=10)
+        self.mode_var = tk.StringVar(value="Mania")
+        self.mode_dropdown = ttk.Combobox(
+            self.tab_filters,
+            textvariable=self.mode_var,
+            state="readonly",
+            values=["Osu", "Taiko", "Catch", "Mania"]
+        )
+        self.mode_dropdown.pack(pady=5)
+
+        # HP range
+        tk.Label(self.tab_filters, text="Min HP:").pack(pady=5)
+        self.min_hp = tk.DoubleVar(value=2.0)
+        self.max_hp = tk.DoubleVar(value=8.0)
+
+        vcmd = (self.tab_filters.register(validate_hp_entry), "%P")
+
+        self.min_entry = tk.Entry(self.tab_filters, textvariable=self.min_hp, validate="key", validatecommand=vcmd)
+        self.min_entry.pack(pady=5)
+
+        tk.Label(self.tab_filters, text="Max HP:").pack(pady=5)
+        self.max_entry = tk.Entry(self.tab_filters, textvariable=self.max_hp, validate="key", validatecommand=vcmd)
+        self.max_entry.pack(pady=5)
+
+        tk.Button(self.tab_filters, text="Print HP Range", command=self.show_hp_range).pack(pady=10)
+
+        # Scan button
+        self.scan_button = tk.Button(self.tab_filters, text="Start Scan", command=self.start_scan)
+        self.scan_button.pack(pady=15)
+
+    # ----------------- Event Handlers -----------------
+    def show_hp_range(self):
+        try:
+            min_val = round(float(self.min_entry.get()), 1)
+            max_val = round(float(self.max_entry.get()), 1)
+
+            if min_val > max_val:
+                messagebox.showwarning("Invalid Range", "Min HP cannot be greater than Max HP.")
+                return
+
+            messagebox.showinfo("HP Range", f"HP range: {min_val:.1f} - {max_val:.1f}")
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter valid numbers.")
 
     def select_songs_folder(self):
         folder = filedialog.askdirectory(title="Select osu! Songs folder")
@@ -170,6 +231,13 @@ class OsuScannerUI:
             self.output_file = file
             self.output_label.config(text=file)
 
+    def log(self, text):
+        self.status_box.config(state=tk.NORMAL)
+        self.status_box.insert(tk.END, text + "\n")
+        self.status_box.see(tk.END)
+        self.status_box.config(state=tk.DISABLED)
+        self.root.update_idletasks()
+
     def start_scan(self):
         if not self.songs_dir or not self.output_file:
             messagebox.showwarning("Missing info", "Please select Songs folder and output file")
@@ -181,28 +249,43 @@ class OsuScannerUI:
             return
 
         target_tags = [t.strip() for t in tags_input.split(",") if t.strip()]
+        selected_mode = self.mode_var.get().lower()
 
         self.scan_button.config(state=tk.DISABLED)
-        self.log("Starting scan...")
+        self.log(f"Starting scan...\nTags: {target_tags}\nMode: {selected_mode}\nHP: {self.min_hp.get():.1f} - {self.max_hp.get():.1f}")
 
-        # Run scan in separate thread so GUI doesn't freeze
-        threading.Thread(target=self.run_scan, args=(target_tags,), daemon=True).start()
+        threading.Thread(target=self.run_scan, args=(target_tags, selected_mode), daemon=True).start()
 
-    def run_scan(self, target_tags):
+    def run_scan(self, target_tags, selected_mode):
+        # Run SongScanner
         scanner = SongScanner(self.songs_dir, target_tags)
         scanner.scan()
 
+        filtered_matches = [m for m in scanner.matches if m["mode"].lower() == selected_mode]
+
         self.log(f"Mapsets scanned: {scanner.mapsets_scanned}")
-        self.log(f"Matches found: {len(scanner.matches)}")
+        self.log(f"Matches found (mode={selected_mode}): {len(filtered_matches)}")
 
-        scanner.export_links(self.output_file)
-        self.log(f"Exported links to: {self.output_file}")
+        with open(self.output_file, "w", encoding="utf-8") as f:
+            for m in filtered_matches:
+                link = f"https://osu.ppy.sh/beatmapsets/{m['mapset_id']}"
+                f.write(link + "\n")
 
+        self.log(f"Exported {len(filtered_matches)} links to: {self.output_file}")
         self.scan_button.config(state=tk.NORMAL)
         messagebox.showinfo("Done", "Scan and export complete!")
 
-# ------------------- Run the GUI -------------------
+    def show_range(self):
+        try:
+            min_val = round(float(self.min_entry.get()), 1)
+            max_val = round(float(self.max_entry.get()), 1)
+            print(f"HP range: {min_val:.1f} - {max_val:.1f}")
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter valid numbers.")
 
+
+# ------------------- Run the GUI -------------------
 if __name__ == "__main__":
     OsuScannerUI()
+
 
