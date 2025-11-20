@@ -67,16 +67,15 @@ def md5_file(path):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-# -------------------- EXPORT FUNCTION --------------------
+# -------------- EXPORT ----------------
 
-def export_selected_collections(selected_indices, collections, songs_folder, progress_var, root, listbox):
+def export_selected_collections(selected_indices, collections, songs_folder, osu_folder, progress_var, root, listbox):
     total_collections = len(selected_indices)
     exported_count = 0
     total_missing = 0
 
-    folder = filedialog.askdirectory(title="Select output folder")
-    if not folder:
-        return
+    folder = os.path.join(osu_folder, "collection_exports")
+    os.makedirs(folder, exist_ok=True)  # create a subfolder for exports
 
     for idx, i in enumerate(selected_indices):
         name, md5_list = collections[i]
@@ -133,7 +132,7 @@ def export_selected_collections(selected_indices, collections, songs_folder, pro
 
     messagebox.showinfo(
         "Export Complete",
-        f"Exported {exported_count} collections.\nTotal missing songs: {total_missing}"
+        f"Exported {exported_count} collections.\nTotal missing songs: {total_missing}\n\nFiles saved in: {folder}"
     )
 
 # -------------------- GUI --------------------
@@ -147,6 +146,7 @@ class OsuCollectionExporter:
         self.collections = []
         self.songs_folder = ""
         self.collection_path = ""
+        self.osu_folder = ""
 
         self.create_widgets()
         self.root.mainloop()
@@ -166,7 +166,6 @@ class OsuCollectionExporter:
         self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.config(command=self.listbox.yview)
 
-        # Bind selection change to enable/disable export button
         self.listbox.bind('<<ListboxSelect>>', self.on_selection_change)
 
         tk.Label(self.root, text="Export progress:").pack(pady=5)
@@ -199,6 +198,7 @@ class OsuCollectionExporter:
             messagebox.showerror("Error", f"No Songs folder found in {osu_folder}")
             return
 
+        self.osu_folder = osu_folder
         self.songs_folder = songs_folder
         self.collection_path = collection_path
         self.collections = load_collection_db(collection_path)
@@ -222,7 +222,7 @@ class OsuCollectionExporter:
         self.export_button.config(state=tk.DISABLED)  # Disable during export
 
         export_selected_collections(
-            selected, self.collections, self.songs_folder, self.progress_var, self.root, self.listbox
+            selected, self.collections, self.songs_folder, self.osu_folder, self.progress_var, self.root, self.listbox
         )
 
 # -------------------- MAIN --------------------
