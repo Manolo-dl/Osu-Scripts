@@ -24,20 +24,6 @@ Export your osu! collections to `.txt` files with download links for each beatma
 
 ---
 
-## How to Use
-
-1. **Download or clone this repository**:
-
-```bash
-git clone https://github.com/yourusername/osu-collection-exporter.git
-cd osu-collection-exporter
-```
-2. Run the program
-
-```bash
-python collection_export.py
-```
-
 ## Usage
 
 1. Select your osu! folder
@@ -49,10 +35,12 @@ The program will display all collections with the number of beatmaps. Select the
 3. Export
 The `.txt` files with the collections songs will be in the folder: osu!\collection_exports
 
+---
+
 ## Notes
-    The program works entirely offline.
-    Only beatmaps present in your local Songs folder will have links in the exported .txt.
-    Download links format:
+- The program works entirely offline.
+- Only beatmaps present in your local Songs folder will have links in the exported .txt.
+- Download links format:
 ```template
 https://osu.ppy.sh/beatmapsets/<beatmapset_id>#<mode>/<beatmap_id>
 ```
