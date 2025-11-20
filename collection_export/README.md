@@ -1,6 +1,6 @@
 # osu! Collection Exporter (Offline)
 
-Export your osu! collections to `.txt` files with download links for each beatmap, completely offline. No osu! API or internet connection is required.
+Export your osu! collections to `.txt` files with download links for each beatmap, completely offline.
 
 ---
 
