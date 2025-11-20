@@ -108,7 +108,6 @@ def export_selected_collections(selected_indices, collections, songs_folder, pro
                         link = f"https://osu.ppy.sh/beatmapsets/{beatmapset_id}#{mode}/{beatmap_id}"
                         beatmapset_links[beatmapset_id] = link
 
-            # Remove found MD5s from the set
             md5_set -= set(beatmapset_links.keys())
             if not md5_set:
                 break
@@ -128,6 +127,9 @@ def export_selected_collections(selected_indices, collections, songs_folder, pro
 
     # Clear selection using the passed Listbox
     listbox.selection_clear(0, tk.END)
+
+    # Hide progress bar after export
+    progress_var.set(0)
 
     messagebox.showinfo(
         "Export Complete",
@@ -164,12 +166,23 @@ class OsuCollectionExporter:
         self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.config(command=self.listbox.yview)
 
+        # Bind selection change to enable/disable export button
+        self.listbox.bind('<<ListboxSelect>>', self.on_selection_change)
+
         tk.Label(self.root, text="Export progress:").pack(pady=5)
         self.progress_var = tk.IntVar()
         self.progressbar = ttk.Progressbar(self.root, variable=self.progress_var, maximum=100)
         self.progressbar.pack(fill=tk.X, padx=20, pady=5)
+        self.progressbar.pack_forget()  # Hide initially
 
-        tk.Button(self.root, text="Export Selected Collections", command=self.export_collections).pack(pady=10)
+        self.export_button = tk.Button(self.root, text="Export Selected Collections", command=self.export_collections, state=tk.DISABLED)
+        self.export_button.pack(pady=10)
+
+    def on_selection_change(self, event):
+        if self.listbox.curselection():
+            self.export_button.config(state=tk.NORMAL)
+        else:
+            self.export_button.config(state=tk.DISABLED)
 
     def select_osu_folder(self):
         osu_folder = filedialog.askdirectory(title="Select your osu! folder")
@@ -195,12 +208,19 @@ class OsuCollectionExporter:
         self.listbox.delete(0, tk.END)
         for name, beatmaps in self.collections:
             self.listbox.insert(tk.END, f"{name} ({len(beatmaps)} maps)")
+        self.export_button.config(state=tk.DISABLED)
+        self.progressbar.pack_forget()  # Hide initially
 
     def export_collections(self):
         selected = self.listbox.curselection()
         if not selected:
             messagebox.showwarning("No selection", "Please select at least one collection")
             return
+
+        self.progress_var.set(0)
+        self.progressbar.pack(fill=tk.X, padx=20, pady=5)  # Show progress bar
+        self.export_button.config(state=tk.DISABLED)  # Disable during export
+
         export_selected_collections(
             selected, self.collections, self.songs_folder, self.progress_var, self.root, self.listbox
         )
