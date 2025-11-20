@@ -1,6 +1,4 @@
-# osu! Beatmap Downloader GUI
-
-![osu! logo](https://es.wikipedia.org/wiki/Archivo:Osu!_Logo_2016.svg)
+# osu! Beatmap Downloader
 
 ## Description
 
